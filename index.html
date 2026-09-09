@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WeatherGPT — Conversational Weather Intelligence</title>
+<meta name="description" content="Ask the weather anything. Source-attributed, warning-first, uncertainty-aware answers for any Indian location.">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<meta property="og:title" content="WeatherGPT — Conversational Weather Intelligence">
+<meta property="og:description" content="Ask the weather anything. Source-attributed, warning-first, uncertainty-aware answers for any Indian location.">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,450;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/tokens.css?v=4">
+<link rel="stylesheet" href="css/base.css?v=4">
+<link rel="stylesheet" href="css/nav-hero.css?v=4">
+<link rel="stylesheet" href="css/station.css?v=4">
+<link rel="stylesheet" href="css/results.css?v=4">
+</head>
+<body>
+
+<a href="#main" class="skip-link">Skip to content</a>
+
+<div id="connectivity-banner" class="connectivity-banner" hidden role="status">
+  <span data-i18n="connectivity_offline">You're offline — showing cached data where available.</span>
+  <button type="button" id="connectivity-dismiss" aria-label="Dismiss">×</button>
+</div>
+
+<!-- ===================== ICON SPRITE (thin-line instrument set) ===================== -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+<defs>
+<symbol id="icon-compass" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="12" cy="12" r="9"/><path d="M15 9l-2 6-4-2 2-6z"/><circle cx="12" cy="12" r="0.6" fill="currentColor"/></symbol>
+<symbol id="icon-barometer" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="12" cy="13" r="7"/><path d="M12 13l3-3"/><path d="M12 4v2M8 4.5l.6 1.8M16 4.5l-.6 1.8"/></symbol>
+<symbol id="icon-gauge" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M4 15a8 8 0 1116 0"/><path d="M12 15l3.5-4.5"/><circle cx="12" cy="15" r="0.8" fill="currentColor"/></symbol>
+<symbol id="icon-wind-rose" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5v3M12 17.5v3M3.5 12h3M17.5 12h3"/><path d="M6.5 6.5l2 2M15.5 15.5l2 2M17.5 6.5l-2 2M8.5 15.5l-2 2"/></symbol>
+<symbol id="icon-rain-gauge" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M8 3h8l-1 8H9L8 3z"/><path d="M9 11h6v9a3 3 0 01-6 0v-9z"/><path d="M9 15h6"/></symbol>
+<symbol id="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.4M12 19.1v2.4M4.6 4.6l1.7 1.7M17.7 17.7l1.7 1.7M2.5 12h2.4M19.1 12h2.4M4.6 19.4l1.7-1.7M17.7 6.3l1.7-1.7"/></symbol>
+<symbol id="icon-sun-cloud" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="8.5" cy="8" r="3"/><path d="M8.5 2.8v1.4M4 5l1 1M13 5l-1 1"/><path d="M6 20h11a3.5 3.5 0 000-7 5 5 0 00-9.5-1.8A4 4 0 006 20z"/></symbol>
+<symbol id="icon-cloud" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M6 19h11a3.5 3.5 0 000-7 5.5 5.5 0 00-10.6-1.7A4 4 0 006 19z"/></symbol>
+<symbol id="icon-fog" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M6 9h11a3.5 3.5 0 000-7" opacity="0"/><path d="M4 9h12M4 13h16M4 17h12M4 21h16" stroke-linecap="round"/></symbol>
+<symbol id="icon-drizzle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M6 12h11a3.5 3.5 0 000-7 5.5 5.5 0 00-10.6-1.7A4 4 0 006 12z"/><path d="M8 16v2M12 16v2M16 16v2" stroke-linecap="round"/></symbol>
+<symbol id="icon-rain" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M6 11h11a3.5 3.5 0 000-7 5.5 5.5 0 00-10.6-1.7A4 4 0 006 11z"/><path d="M8 15l-1 3M12 15l-1 3M16 15l-1 3" stroke-linecap="round"/></symbol>
+<symbol id="icon-snow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M6 11h11a3.5 3.5 0 000-7 5.5 5.5 0 00-10.6-1.7A4 4 0 006 11z"/><path d="M9 16v4M7 18h4M15 16v4M13 18h4" stroke-linecap="round"/></symbol>
+<symbol id="icon-storm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M6 10h11a3.5 3.5 0 000-7 5.5 5.5 0 00-10.6-1.7A4 4 0 006 10z"/><path d="M13 13l-3 5h3l-2 4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="icon-wind" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M3 8h11a2.5 2.5 0 10-2.4-3.2" stroke-linecap="round"/><path d="M3 13h15a2.5 2.5 0 11-2.4 3.2" stroke-linecap="round"/><path d="M3 18h8a2 2 0 11-1.8 2.8" stroke-linecap="round"/></symbol>
+<symbol id="icon-warning" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 3.5l9.5 16.5H2.5L12 3.5z" stroke-linejoin="round"/><path d="M12 10v4" stroke-linecap="round"/><circle cx="12" cy="17" r="0.7" fill="currentColor" stroke="none"/></symbol>
+<symbol id="icon-check-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="icon-chevron-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 8l7 7 7-7" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="icon-mic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="9" y="3" width="6" height="10" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3" stroke-linecap="round"/></symbol>
+<symbol id="icon-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M20 20l-4.8-4.8" stroke-linecap="round"/></symbol>
+<symbol id="icon-pin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 21s7-6.6 7-11.5A7 7 0 105 9.5C5 14.4 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.3"/></symbol>
+<symbol id="icon-locate" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3" stroke-linecap="round"/></symbol>
+<symbol id="icon-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="icon-layers" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M12 3l9 5-9 5-9-5 9-5z" stroke-linejoin="round"/><path d="M3 13l9 5 9-5" stroke-linejoin="round"/></symbol>
+<symbol id="icon-globe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 010 18 14 14 0 010-18z"/></symbol>
+<symbol id="icon-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></symbol>
+<symbol id="icon-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5" stroke-linecap="round"/><circle cx="12" cy="7.7" r="0.7" fill="currentColor" stroke="none"/></symbol>
+<symbol id="icon-arrow-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 12h15M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="icon-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 12a8 8 0 0114-5.3M20 12a8 8 0 01-14 5.3" stroke-linecap="round"/><path d="M18 4v4h-4M6 20v-4h4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+</defs>
+</svg>
+
+<!-- ===================== NAVIGATION ===================== -->
+<header class="site-nav">
+  <div class="container site-nav__inner">
+    <a href="#top" class="brand" data-view-link="ask">
+      <svg class="brand__mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3"><circle cx="12" cy="12" r="9"/><path d="M15 9l-2 6-4-2 2-6z"/></svg>
+      WeatherGPT
+    </a>
+
+    <nav class="nav-primary" aria-label="Primary">
+      <a href="#" data-view-link="ask" aria-current="page" data-i18n="nav_ask">Ask</a>
+      <a href="#" data-view-link="warnings" data-i18n="nav_warnings">Warnings</a>
+      <a href="#" data-view-link="climate" data-i18n="nav_climate">Climate Trends</a>
+      <a href="#" data-view-link="about" data-i18n="nav_about">About the Data</a>
+    </nav>
+
+    <div class="nav-controls">
+      <div class="dd dd--language" id="dd-language">
+        <button type="button" class="dd__button" data-dd-button aria-haspopup="listbox" aria-expanded="false" aria-label="Language">
+          <svg class="icon icon-sm"><use href="#icon-globe"/></svg>
+          <span data-dd-label>English</span>
+          <svg class="icon-sm dd__button-caret"><use href="#icon-chevron-down"/></svg>
+        </button>
+        <div class="dd__list" data-dd-list role="listbox" hidden></div>
+      </div>
+
+      <div class="dd dd--unit" id="dd-unit">
+        <button type="button" class="dd__button" data-dd-button aria-haspopup="listbox" aria-expanded="false" aria-label="Temperature unit">
+          <span data-dd-label>°C</span>
+          <svg class="icon-sm dd__button-caret"><use href="#icon-chevron-down"/></svg>
+        </button>
+        <div class="dd__list" data-dd-list role="listbox" hidden></div>
+      </div>
+
+      <button type="button" class="btn-icon" id="geolocate-btn" aria-label="Use my location" title="Use my location">
+        <svg class="icon icon-sm"><use href="#icon-locate"/></svg>
+      </button>
+
+      <div class="dd dd--location" id="dd-nav-location">
+        <button type="button" class="dd__button" data-dd-button aria-haspopup="listbox" aria-expanded="false" aria-label="Location">
+          <svg class="icon icon-sm"><use href="#icon-pin"/></svg>
+          <span data-dd-label class="dd__button-label">Raipur</span>
+          <svg class="icon-sm dd__button-caret"><use href="#icon-chevron-down"/></svg>
+        </button>
+        <div class="dd__list" data-dd-list role="listbox" hidden>
+          <input type="text" class="dd__search" data-dd-search placeholder="Search city, district…" aria-label="Search location">
+        </div>
+      </div>
+
+      <button class="nav-toggle" aria-label="Menu">
+        <svg class="icon"><use href="#icon-layers"/></svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+
+<!-- ===================== ASK VIEW ===================== -->
+<section class="view is-active" data-view="ask" id="top">
+
+  <div class="hero">
+    <div class="container hero__inner">
+      <div class="hero__copy">
+        <p class="eyebrow hero__eyebrow" data-i18n="hero_eyebrow">Conversational Weather Intelligence</p>
+        <h1 class="hero__title" data-i18n="hero_title">Ask the weather anything.</h1>
+        <p class="hero__sub" data-i18n="hero_sub">WeatherGPT brings forecasts, warnings, and climate data together into a single, source-attributed answer for your location — never a guess.</p>
+        <div class="hero__ctas">
+          <a href="#station" class="btn btn--primary" data-scroll-to="station">
+            <span data-i18n="hero_cta_primary">Ask a question</span>
+            <svg class="icon-sm"><use href="#icon-arrow-right"/></svg>
+          </a>
+          <a href="#" class="btn btn--secondary" data-view-link="about" data-i18n="hero_cta_secondary">See how answers are verified</a>
+        </div>
+      </div>
+
+      <div class="hero__visual">
+        <svg class="dial hero__visual--full" viewBox="0 0 400 400" role="img" aria-label="Rotating instrument dial illustration">
+          <circle cx="200" cy="200" r="170" fill="none" stroke="var(--color-sand)" stroke-width="1"/>
+          <g class="dial__ring-outer">
+            <circle cx="200" cy="200" r="150" fill="none" stroke="var(--color-champagne)" stroke-width="1"/>
+            <g stroke="var(--color-bronze)" stroke-width="1.2">
+              <line x1="200" y1="50" x2="200" y2="66"/>
+              <line x1="350" y1="200" x2="334" y2="200"/>
+              <line x1="200" y1="350" x2="200" y2="334"/>
+              <line x1="50" y1="200" x2="66" y2="200"/>
+            </g>
+          </g>
+          <g class="dial__ring-inner">
+            <circle cx="200" cy="200" r="112" fill="none" stroke="var(--color-gold)" stroke-width="0.75" stroke-dasharray="2 6"/>
+          </g>
+          <circle cx="200" cy="200" r="82" fill="var(--color-paper)" stroke="var(--border-strong)" stroke-width="1"/>
+          <g class="dial__needle">
+            <line x1="200" y1="200" x2="200" y2="132" stroke="var(--color-gold-text)" stroke-width="2" stroke-linecap="round"/>
+            <line x1="200" y1="200" x2="200" y2="245" stroke="var(--color-taupe)" stroke-width="1.4" stroke-linecap="round"/>
+          </g>
+          <circle cx="200" cy="200" r="4.5" fill="var(--color-walnut)"/>
+          <text x="200" y="120" text-anchor="middle" font-family="var(--font-mono)" font-size="9" fill="var(--color-taupe)">N</text>
+          <text x="200" y="292" text-anchor="middle" font-family="var(--font-mono)" font-size="9" fill="var(--color-taupe)">S</text>
+        </svg>
+        <svg class="hero__visual--static" viewBox="0 0 400 400" role="img" aria-label="Instrument dial illustration">
+          <circle cx="200" cy="200" r="170" fill="none" stroke="var(--color-sand)" stroke-width="1"/>
+          <circle cx="200" cy="200" r="112" fill="none" stroke="var(--color-gold)" stroke-width="0.75" stroke-dasharray="2 6"/>
+          <circle cx="200" cy="200" r="82" fill="var(--color-paper)" stroke="var(--border-strong)" stroke-width="1"/>
+          <line x1="200" y1="200" x2="200" y2="132" stroke="var(--color-gold-text)" stroke-width="2" stroke-linecap="round"/>
+          <circle cx="200" cy="200" r="4.5" fill="var(--color-walnut)"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <div class="container" id="station">
+    <div class="station">
+      <p class="station__label" data-i18n="station_label">The Query Station</p>
+      <p class="station__hint" data-i18n="station_hint">Type a plain-language question, or use the controls below — both drive the same live data.</p>
+
+      <div class="station__tabs" role="tablist" aria-label="Query method">
+        <button class="station__tab" id="tab-chat" role="tab" aria-selected="true" aria-controls="panel-chat" data-i18n="tab_ask">Ask WeatherGPT</button>
+        <button class="station__tab" id="tab-controls" role="tab" aria-selected="false" aria-controls="panel-controls" data-i18n="tab_controls">Structured controls</button>
+      </div>
+
+      <div id="panel-chat" role="tabpanel" aria-labelledby="tab-chat">
+        <form class="chat-form" id="chat-form">
+          <div class="chat-form__field">
+            <label for="chat-input" class="visually-hidden">Ask a weather question</label>
+            <input type="text" id="chat-input" class="chat-form__input" data-i18n-placeholder="chat_placeholder" placeholder="Will it rain in Raipur tomorrow evening?" autocomplete="off">
+            <button type="button" class="chat-form__mic" id="mic-btn" aria-pressed="false" aria-label="Ask by voice">
+              <svg class="icon"><use href="#icon-mic"/></svg>
+            </button>
+          </div>
+          <button type="submit" class="btn btn--primary" id="chat-submit">
+            <span data-i18n="ask_button">Ask WeatherGPT</span>
+          </button>
+        </form>
+        <div class="suggestions" id="suggestions"></div>
+      </div>
+
+      <div id="panel-controls" role="tabpanel" aria-labelledby="tab-controls" hidden>
+        <div class="station__controls" id="structured-controls"></div>
+      </div>
+
+      <div class="confirm-row" id="confirm-row" hidden></div>
+    </div>
+  </div>
+
+  <div class="container page-section" id="answer-area" aria-live="polite">
+    <!-- populated by app.js: processing sequence → result -->
+  </div>
+</section>
+
+<!-- ===================== WARNINGS VIEW ===================== -->
+<section class="view" data-view="warnings">
+  <div class="container page-section">
+    <div class="section-head">
+      <div>
+        <h2 class="section-head__title">Active Warnings</h2>
+        <p class="section-head__sub">Official IMD severe weather alerts and derived risk indicators.</p>
+      </div>
+      <button class="btn btn--secondary btn--sm" id="warnings-refresh">
+        <svg class="icon-sm"><use href="#icon-refresh"/></svg> Refresh
+      </button>
+    </div>
+    <div class="imd-attribution" id="imd-attribution">
+      <a href="https://mausam.imd.gov.in/" target="_blank" rel="noopener">Source: India Meteorological Department (IMD)</a>
+      <span class="imd-attribution__detail">CAP 1.2 public feed · auto-refreshed every 12 minutes</span>
+    </div>
+    <div id="imd-alerts-list" class="warning-list"></div>
+    <div class="disclosure-note" style="margin-top:var(--sp-6)">
+      <svg class="icon"><use href="#icon-info"/></svg>
+      <span>Below the IMD alerts, a <strong>derived risk indicator</strong> is shown — computed from Open-Meteo forecast thresholds (rainfall, wind, heat) for your tracked locations. This is not an official IMD warning.</span>
+    </div>
+    <label class="notify-toggle">
+      <input type="checkbox" id="notify-toggle-input">
+      <span data-i18n="notify_toggle_label">Notify me in-browser if risk rises for this location</span>
+    </label>
+    <div id="warnings-list" class="warning-list"></div>
+  </div>
+</section>
+
+<!-- ===================== CLIMATE VIEW ===================== -->
+<section class="view" data-view="climate">
+  <div class="container page-section">
+    <div class="section-head">
+      <div>
+        <h2 class="section-head__title">Climate Trends</h2>
+        <p class="section-head__sub">Historical, not forecast — derived from the Open-Meteo reanalysis archive.</p>
+      </div>
+    </div>
+    <div class="climate-controls" id="climate-controls"></div>
+    <div id="climate-body"></div>
+  </div>
+</section>
+
+<!-- ===================== ABOUT VIEW ===================== -->
+<section class="view" data-view="about">
+  <div class="container page-section" style="max-width:760px">
+    <h2 class="section-head__title" style="margin-bottom:var(--sp-6)">About the Data</h2>
+
+    <p style="font-size:15px;line-height:1.7;color:var(--color-coffee);margin-bottom:var(--sp-6)">
+      WeatherGPT never invents a weather value. Every number on this site is retrieved live, at the moment you ask,
+      from named sources below — the conversational layer only explains what those sources returned.
+    </p>
+
+    <h3 class="font-display" style="font-size:19px;margin-bottom:var(--sp-3);color:var(--color-walnut)">Forecast</h3>
+    <p style="font-size:14px;line-height:1.7;color:var(--color-coffee);margin-bottom:var(--sp-6)">
+      Pulled live from <strong>Open-Meteo</strong>, which aggregates three independent numerical weather models —
+      <span class="font-mono" style="font-size:12.5px">ECMWF IFS</span>,
+      <span class="font-mono" style="font-size:12.5px">NOAA GFS</span>, and
+      <span class="font-mono" style="font-size:12.5px">DWD ICON</span>. WeatherGPT queries all three and shows you
+      where they agree and where they don't, rather than presenting one number as certain.
+    </p>
+
+    <h3 class="font-display" style="font-size:19px;margin-bottom:var(--sp-3);color:var(--color-walnut)">Warnings</h3>
+    <p style="font-size:14px;line-height:1.7;color:var(--color-coffee);margin-bottom:var(--sp-6)">
+      The Warnings page shows <strong>live IMD severe weather alerts</strong> pulled from the India Meteorological
+      Department's public CAP 1.2 RSS feed. Alerts are polled every 12 minutes, parsed for event type, severity,
+      affected area, and validity window, then served as structured JSON. Below the IMD alerts, a clearly labelled
+      <strong>derived risk indicator</strong> from Open-Meteo forecast thresholds is also shown for context — never
+      presented as an official alert.
+    </p>
+
+    <h3 class="font-display" style="font-size:19px;margin-bottom:var(--sp-3);color:var(--color-walnut)">Climate</h3>
+    <p style="font-size:14px;line-height:1.7;color:var(--color-coffee);margin-bottom:var(--sp-6)">
+      Historical trends use Open-Meteo's archive endpoint, which is built on the ERA5 reanalysis dataset. Trends
+      compare two equal-length periods and are shown only alongside the underlying averages, never as a bare
+      headline claim.
+    </p>
+
+    <h3 class="font-display" style="font-size:19px;margin-bottom:var(--sp-3);color:var(--color-walnut)">Confidence</h3>
+    <p style="font-size:14px;line-height:1.7;color:var(--color-coffee)">
+      "Confidence" on this site reflects how closely the three forecast models agree for the specific location
+      and time window you asked about — a real, computed spread, not a decorative badge.
+    </p>
+  </div>
+</section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="container site-footer__inner">
+    <span>WeatherGPT — a conversational layer over live meteorological data. Built for SIH26068.</span>
+    <div class="site-footer__links">
+      <a href="#" data-view-link="about">About the Data</a>
+      <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a>
+    </div>
+  </div>
+</footer>
+
+<div class="toast-region" id="toast-region" aria-live="assertive"></div>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

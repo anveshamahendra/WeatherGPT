@@ -1,0 +1,41 @@
+{
+  "lastFetchedAt": "2026-09-09T19:00:11.370Z",
+  "seenGuids": [
+    "urn:oid:2.49.0.1.356.0.2026.9.9.7.24.34",
+    "https://cap-sources.s3.amazonaws.com/in-imd-en/2026-09-09-07-24-34.xml"
+  ],
+  "alerts": [
+    {
+      "guid": "urn:oid:2.49.0.1.356.0.2026.9.9.7.24.34",
+      "identifier": "urn:oid:2.49.0.1.356.0.2026.9.9.7.24.34",
+      "link": "https://cap-sources.s3.amazonaws.com/in-imd-en/2026-09-09-07-24-34.xml",
+      "pubDate": "Wed, 09 Sep 2026 07:24:34 +0000",
+      "sender": "rainfallnwfc@gmail.com",
+      "senderName": "NWFC DIVISION, IMD, NEW DELHI",
+      "sent": "2026-09-09T12:54:34+05:30",
+      "sentIso": "2026-09-09T07:24:34.000Z",
+      "status": "Actual",
+      "msgType": "Alert",
+      "scope": "Public",
+      "language": "en",
+      "category": "Met",
+      "event": "Extremely heavy",
+      "urgency": "Expected",
+      "severity": "Severe",
+      "certainty": "Likely",
+      "onset": "2026-09-09T07:00:00+05:30",
+      "expires": "2026-09-10T07:00:00+05:30",
+      "expiresIso": "2026-09-10T01:30:00.000Z",
+      "headline": "Heavy to very heavy with extremely heavy rainfall",
+      "description": "Isolated extremely rainfall likely over Odisha on 10th September.",
+      "instruction": "Action suggested\n\n Avoid roadway underpasses, drainage ditches, low lying areas and areas where water collects – they can unexpectedly flood or overflow.\n Stay away from power lines or electrical wires.\n Don’t stay in kuchcha houses during heavy rainfall as it may collapse anytime soon.\n Drive carefully.",
+      "web": "https://mausam.imd.gov.in/imd_latest/contents/subdivisionwise-warning.php",
+      "areaDesc": "ODISHA",
+      "polygon": "21.7228,83.2412 21.3303,82.5732 18.2210,82.1865 18.7545,84.1904 20.6410,87.0732 22.3094,86.6162 22.4720,84.6123 21.7228,83.2412",
+      "source": "India Meteorological Department (IMD)",
+      "sourceUrl": "https://cap-sources.s3.amazonaws.com/in-imd-en/2026-09-09-07-24-34.xml",
+      "capParsed": true,
+      "lastUpdated": "2026-09-09T12:13:00.918Z"
+    }
+  ]
+}

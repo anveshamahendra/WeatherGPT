@@ -1,0 +1,22 @@
+{
+  "name": "weathergpt",
+  "version": "1.0.0",
+  "description": "WeatherGPT with India Meteorological Department (IMD) Severe Weather Warnings Feed",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "test:poller": "node -e \"import('./server/imd-poller.js').then(async m => { const s = new m.ImdAlertsService(); await s.fetchAndProcess(); console.log(s.getActiveAlerts()); })\""
+  },
+  "keywords": [
+    "imd",
+    "weather",
+    "severe-weather-alerts",
+    "cap-1.2",
+    "meteorology",
+    "india"
+  ],
+  "author": "",
+  "license": "ISC"
+}

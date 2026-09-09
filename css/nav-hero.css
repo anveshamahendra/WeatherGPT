@@ -1,0 +1,234 @@
+/* ==========================================================================
+   Navigation
+   ========================================================================== */
+
+.site-nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(248, 244, 236, 0.92);
+  backdrop-filter: blur(6px);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.site-nav__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-6);
+  padding: var(--sp-3) 0;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--color-walnut);
+  white-space: nowrap;
+}
+
+.brand__mark {
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+}
+
+.nav-primary {
+  display: flex;
+  gap: var(--sp-8);
+  flex: 1;
+  justify-content: center;
+}
+
+.nav-primary a {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-coffee);
+  text-decoration: none;
+  padding: var(--sp-2) 0;
+  position: relative;
+  border-bottom: 2px solid transparent;
+  transition: color var(--dur-micro) var(--ease-standard), border-color var(--dur-micro) var(--ease-standard);
+}
+
+.nav-primary a:hover { color: var(--color-espresso); }
+
+.nav-primary a[aria-current="page"] {
+  color: var(--color-espresso);
+  border-bottom-color: var(--color-gold);
+  font-weight: 600;
+}
+
+.nav-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  background: var(--color-paper);
+  color: var(--color-walnut);
+  cursor: pointer;
+  transition: background var(--dur-micro) var(--ease-standard);
+}
+.btn-icon:hover { background: var(--color-cream); }
+.btn-icon:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.nav-toggle {
+  display: none;
+}
+
+@media (max-width: 860px) {
+  .nav-primary { display: none; }
+  .nav-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-sm);
+  }
+  .nav-toggle:hover { background: var(--color-cream); }
+}
+
+@media (max-width: 640px) {
+  .nav-controls .dd--location .dd__button-label { display: none; }
+}
+
+/* ==========================================================================
+   Hero
+   ========================================================================== */
+
+.hero {
+  padding: var(--sp-16) 0 var(--sp-12);
+  position: relative;
+  overflow: hidden;
+}
+
+.hero__inner {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  gap: var(--sp-16);
+  align-items: center;
+}
+
+.hero__copy { max-width: 560px; }
+
+.hero__eyebrow { margin-bottom: var(--sp-4); }
+
+.hero__title {
+  font-family: var(--font-display);
+  font-size: clamp(38px, 5vw, 58px);
+  line-height: 1.06;
+  font-weight: 500;
+  color: var(--color-walnut);
+  letter-spacing: -0.01em;
+  margin-bottom: var(--sp-5);
+}
+
+.hero__sub {
+  font-size: 17px;
+  line-height: 1.6;
+  color: var(--color-coffee);
+  max-width: 46ch;
+  margin-bottom: var(--sp-8);
+}
+
+.hero__ctas {
+  display: flex;
+  gap: var(--sp-4);
+  flex-wrap: wrap;
+}
+
+.hero__visual {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  max-width: 460px;
+  justify-self: center;
+  width: 100%;
+}
+
+@media (max-width: 900px) {
+  .hero__inner { grid-template-columns: 1fr; }
+  .hero__visual { max-width: 320px; order: -1; margin: 0 auto var(--sp-4); }
+  .hero__copy { max-width: none; }
+}
+
+/* Instrument dial — layered SVG, CSS-driven rotation, no WebGL dependency */
+.dial {
+  width: 100%;
+  height: 100%;
+}
+
+.dial__ring-outer { animation: dial-spin-slow 120s linear infinite; transform-origin: 200px 200px; }
+.dial__ring-inner { animation: dial-spin-slow-rev 90s linear infinite; transform-origin: 200px 200px; }
+.dial__needle { animation: dial-sway 14s ease-in-out infinite; transform-origin: 200px 200px; }
+
+@keyframes dial-spin-slow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes dial-spin-slow-rev { from { transform: rotate(0deg); } to { transform: rotate(-360deg); } }
+@keyframes dial-sway {
+  0%, 100% { transform: rotate(-3deg); }
+  50% { transform: rotate(4deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dial__ring-outer, .dial__ring-inner, .dial__needle { animation: none; }
+}
+
+@media (max-width: 768px) {
+  .hero__visual--full { display: none; }
+  .hero__visual--static { display: block; }
+}
+.hero__visual--static { display: none; }
+
+/* ==========================================================================
+   Banners (Stale / Connectivity)
+   ========================================================================== */
+
+.stale-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-4);
+  margin-bottom: var(--sp-4);
+  background: var(--status-warning-bg);
+  color: var(--status-warning);
+  border-radius: var(--radius-md);
+  font-size: 13.5px;
+  border: 1px solid var(--border-subtle);
+}
+.stale-banner .icon-sm { flex-shrink: 0; }
+
+.connectivity-banner {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-4);
+  padding: var(--sp-2) var(--sp-4);
+  background: var(--status-info-bg);
+  color: var(--status-info);
+  font-size: 13px;
+  text-align: center;
+}
+.connectivity-banner button {
+  background: none;
+  border: none;
+  color: inherit;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
