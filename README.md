@@ -39,6 +39,10 @@ js/api.js               Open-Meteo geocoding / forecast / archive calls — the 
 js/dropdown.js          Reusable accessible listbox/combobox component
 js/i18n.js              English/Hindi string table
 js/app.js               State, view routing, query pipeline, rendering
+server.js               Node.js server — serves static assets + /api/weather-alerts endpoint
+server/imd-poller.js    Polls IMD CAP 1.2 RSS feed, parses alerts, manages cache
+data/imd-alerts-cache.json  Persisted IMD alert cache (auto-generated)
+sw.js                   Service worker for offline shell caching
 ```
 
 ## Data sources — what is live and what isn't
@@ -49,7 +53,8 @@ js/app.js               State, view routing, query pipeline, rendering
 | Model agreement / confidence | Computed from the real spread across the three models above | **Live**, computed |
 | Location search | Open-Meteo geocoding API | **Live** |
 | Climate / historical trends | Open-Meteo historical archive (ERA5 reanalysis) | **Live** |
-| Warnings | Threshold rules applied to the live forecast above (rainfall, wind, heat) | **Derived, not official.** This is explicitly labelled everywhere it appears — it is *not* an IMD warning feed. There is no public, keyless, CORS-enabled IMD warnings API to wire in for a static demo; `js/api.js` is structured so a real IMD endpoint can replace the threshold check without any UI changes. |
+| IMD severe weather alerts | India Meteorological Department CAP 1.2 RSS feed, polled server-side every 12 minutes and served via `/api/weather-alerts` | **Live**, server-polled |
+| Derived risk indicator | Threshold rules applied to the live forecast above (rainfall, wind, heat) | **Derived, not official.** This is explicitly labelled everywhere it appears — it is *not* an IMD warning feed. |
 
 If a live call fails, the UI shows an explicit "temporarily unavailable" state with a retry action —
 it never fabricates a reading. Forecast responses are cached in memory for 10 minutes per location to
@@ -58,20 +63,35 @@ timestamp.
 
 ## Running it
 
-No installation required.
+The primary way to run WeatherGPT is with the included Node.js server, which provides both the
+static frontend and the IMD alerts API. It requires zero `npm install` — only built-in Node
+modules and the native `fetch` API are used.
 
 ```
 # from the project folder
-python3 -m http.server 8080
+node server.js
 # then open http://localhost:8080
 ```
 
-Or open `index.html` directly in a browser. An internet connection is required for live data
-(Open-Meteo has no API key / auth requirement).
+The server listens on port 8080 by default (override with `PORT` env var). The IMD alerts
+section on the Warnings page requires the server to be running, because `/api/weather-alerts`
+does not exist under `file://` or a plain static file server (e.g. `python3 -m http.server`).
+Forecast and climate features work fine without the server, as they hit Open-Meteo directly from
+the browser.
+
+## Packaging for submission
+
+To create a submission archive without the `.git/` directory, run:
+
+```
+npm run package
+```
+
+This creates `weathergpt.tar.gz` in the parent directory, excluding the `.git` folder. On Windows, you can also use `tar` from Git Bash or use PowerShell's `Compress-Archive` with appropriate exclusions.
 
 ## Known limitations
 
-- Warnings are a derived risk indicator, not an official IMD feed (see table above).
+- The derived risk indicator shown on the Warnings page is computed from forecast thresholds, not an official IMD feed (see table above).
 - Voice input uses the browser's native `SpeechRecognition` API where available (Chrome/Edge); it is
   not supported in every browser and degrades to a disabled button with an explanatory title when absent.
 - Hindi coverage is limited to interface labels and suggested questions listed in `js/i18n.js`, not a

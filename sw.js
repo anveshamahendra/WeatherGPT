@@ -12,6 +12,7 @@ const SHELL_FILES = [
   './js/dropdown.js',
   './js/i18n.js',
   './js/app.js',
+  './manifest.json',
 ];
 
 self.addEventListener('install', (event) => {

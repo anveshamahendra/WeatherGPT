@@ -7,7 +7,8 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
-    "test:poller": "node -e \"import('./server/imd-poller.js').then(async m => { const s = new m.ImdAlertsService(); await s.fetchAndProcess(); console.log(s.getActiveAlerts()); })\""
+    "test:poller": "node -e \"import('./server/imd-poller.js').then(async m => { const s = new m.ImdAlertsService(); await s.fetchAndProcess(); console.log(s.getActiveAlerts()); })\"",
+    "package": "tar -czf ../weathergpt.tar.gz --exclude='.git' ."
   },
   "keywords": [
     "imd",

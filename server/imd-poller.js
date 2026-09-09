@@ -180,7 +180,7 @@ export class ImdAlertsService {
       console.log(`[IMD Poller] Fetching RSS index: ${this.rssUrl}`);
       const res = await fetch(this.rssUrl, {
         headers: {
-          'User-Agent': 'WeatherGPT-Alerts-Poller/1.0 (https://weathergpt.gov.in; public service)',
+          'User-Agent': 'WeatherGPT-SIH26068-Prototype/1.0 (Smart India Hackathon student project; contact: https://github.com/weathergpt-sih26068)',
           'Accept': 'application/rss+xml, application/xml, text/xml',
         },
         signal: AbortSignal.timeout(15000), // 15 second network timeout
@@ -315,7 +315,7 @@ export class ImdAlertsService {
   async fetchAndParseCapXml(capUrl, rssMeta = {}) {
     const res = await fetch(capUrl, {
       headers: {
-        'User-Agent': 'WeatherGPT-Alerts-Poller/1.0',
+        'User-Agent': 'WeatherGPT-SIH26068-Prototype/1.0 (Smart India Hackathon student project; contact: https://github.com/weathergpt-sih26068)',
         'Accept': 'application/xml, text/xml, */*',
       },
       signal: AbortSignal.timeout(12000),
