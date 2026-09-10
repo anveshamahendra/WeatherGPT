@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 48" fill="none">
+  <circle cx="24" cy="24" r="20" stroke="#D8C08A" stroke-width="1.5"/>
+  <circle cx="24" cy="24" r="15" stroke="#F8F4EC" stroke-width="0.8" stroke-dasharray="2 5" opacity="0.5"/>
+  <path d="M30 18l-4 12-8-4 4-12z" fill="#D8C08A" opacity="0.9"/>
+  <path d="M30 18l-4 12-8-4 4-12z" stroke="#F8F4EC" stroke-width="0.8" stroke-linejoin="round"/>
+  <circle cx="24" cy="24" r="2" fill="#F8F4EC"/>
+  <text x="54" y="30" font-family="'Fraunces', Georgia, serif" font-size="22" font-weight="600" fill="#F8F4EC" letter-spacing="0.5">WeatherGPT</text>
+</svg>

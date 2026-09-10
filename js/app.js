@@ -383,7 +383,16 @@ function switchView(name) {
     if (active) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
   });
   window.scrollTo({ top: 0, behavior: 'auto' });
-  if (name === 'warnings') { renderWarningsView(); setupNotifyToggle(); }
+  if (name === 'warnings') {
+    renderWarningsView();
+    setupNotifyToggle();
+    startWarningsPolling();
+    const refreshBtn = document.getElementById('warnings-refresh');
+    if (refreshBtn && !refreshBtn.dataset.wired) {
+      refreshBtn.dataset.wired = '1';
+      refreshBtn.addEventListener('click', () => renderWarningsView());
+    }
+  }
   if (name === 'climate' && !document.getElementById('climate-controls').childElementCount) setupClimateControls();
 }
 
@@ -845,6 +854,12 @@ function renderDailyTable(daily) {
 // Warnings view — IMD CAP alerts + derived risk indicators
 // ==========================================================================
 
+const WARNINGS_REFRESH_INTERVAL_MS = 5 * 60 * 1000;
+let imdPollTimerId = null;
+let imdAbortController = null;
+let imdPollingActive = false;
+let imdLastFetchedAt = null;
+
 /** Map IMD CAP severity to a CSS-compatible tier string */
 function imdSeverityTier(sev) {
   switch (sev) {
@@ -932,15 +947,15 @@ function capParseDoc(xml, rssMeta = {}) {
 }
 
 /** Fetch IMD alerts: try the Node server API first, fall back to direct RSS parsing */
-async function fetchImdAlerts() {
+async function fetchImdAlerts({ signal } = {}) {
   // Attempt 1: Node.js server API (fast, pre-parsed, cached)
   try {
-    const res = await fetch('/api/weather-alerts');
+    const res = await fetch('/api/weather-alerts', { signal });
     if (res.ok) return await res.json();
   } catch (_) { /* server not running — fall through to client-side parsing */ }
 
   // Attempt 2: Fetch RSS + each CAP XML directly in the browser
-  const res = await fetch(IMD_RSS_URL);
+  const res = await fetch(IMD_RSS_URL, { signal });
   if (!res.ok) throw new Error(`RSS fetch ${res.status}`);
 
   const rssXml = await res.text();
@@ -956,7 +971,7 @@ async function fetchImdAlerts() {
     if (!link) continue;
 
     try {
-      const capRes = await fetch(link);
+      const capRes = await fetch(link, { signal });
       if (!capRes.ok) continue;
       const capXml = await capRes.text();
       const alert = capParseDoc(capXml, { guid, link, title, pubDate, description });
@@ -1092,6 +1107,45 @@ async function renderWarningsView() {
     </div>`;
   }
   checkNotifyThresholds();
+}
+
+// --- IMD alerts auto-polling (5-minute interval) ---
+
+function pollWarningsImd() {
+  const imdList = document.getElementById('imd-alerts-list');
+  if (!imdList) return;
+
+  if (imdAbortController) imdAbortController.abort();
+  imdAbortController = new AbortController();
+  const { signal } = imdAbortController;
+
+  fetchImdAlerts({ signal }).then((payload) => {
+    if (signal.aborted) return;
+    const alerts = payload.alerts || [];
+    imdLastFetchedAt = new Date();
+
+    if (!alerts.length) {
+      imdList.innerHTML = `<div class="state-panel state-panel--empty">
+        <p class="state-panel__title">No active IMD warnings</p>
+        <p class="state-panel__body">The India Meteorological Department currently has no active or recent severe weather alerts in the feed.</p>
+      </div>`;
+    } else {
+      imdList.innerHTML = alerts.map(renderImdAlertCard).join('');
+    }
+
+    const ts = document.getElementById('imd-last-updated');
+    if (ts) ts.textContent = `Last updated: ${imdLastFetchedAt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false })}`;
+  }).catch((e) => {
+    if (signal.aborted) return;
+    console.warn('[imd-poll] fetch failed, will retry next cycle:', e.message || e);
+  });
+}
+
+function startWarningsPolling() {
+  if (imdPollingActive) return;
+  imdPollingActive = true;
+  pollWarningsImd();
+  imdPollTimerId = setInterval(pollWarningsImd, WARNINGS_REFRESH_INTERVAL_MS);
 }
 
 async function checkNotifyThresholds() {

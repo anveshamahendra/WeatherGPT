@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" fill="none">
+  <rect width="1200" height="630" fill="#F8F4EC"/>
+  <rect x="0" y="0" width="1200" height="630" fill="url(#og-gradient)"/>
+  <defs>
+    <linearGradient id="og-gradient" x1="0" y1="0" x2="1200" y2="630" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F8F4EC"/>
+      <stop offset="1" stop-color="#F2EBDD"/>
+    </linearGradient>
+  </defs>
+  <!-- Decorative rings -->
+  <circle cx="600" cy="315" r="200" stroke="#D8C08A" stroke-width="0.8" stroke-dasharray="2 6" opacity="0.4"/>
+  <circle cx="600" cy="315" r="260" stroke="#DCCCB4" stroke-width="0.5" opacity="0.3"/>
+  <!-- Logo icon -->
+  <g transform="translate(540, 240) scale(2.5)">
+    <circle cx="24" cy="24" r="20" stroke="#B18A43" stroke-width="1.5"/>
+    <circle cx="24" cy="24" r="15" stroke="#D8C08A" stroke-width="0.8" stroke-dasharray="2 5"/>
+    <path d="M30 18l-4 12-8-4 4-12z" fill="#B18A43" opacity="0.9"/>
+    <path d="M30 18l-4 12-8-4 4-12z" stroke="#8A6A2E" stroke-width="0.8" stroke-linejoin="round"/>
+    <circle cx="24" cy="24" r="2" fill="#8A6A2E"/>
+  </g>
+  <!-- Wordmark -->
+  <text x="600" y="420" text-anchor="middle" font-family="'Fraunces', Georgia, serif" font-size="56" font-weight="600" fill="#38291F" letter-spacing="1">WeatherGPT</text>
+  <!-- Tagline -->
+  <text x="600" y="460" text-anchor="middle" font-family="'Inter', system-ui, sans-serif" font-size="18" fill="#6E6154" letter-spacing="0.5">Conversational Weather Intelligence</text>
+</svg>
