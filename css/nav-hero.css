@@ -29,6 +29,7 @@
   letter-spacing: 0.01em;
   color: var(--color-walnut);
   white-space: nowrap;
+  text-decoration: none;
 }
 
 .brand__logo {
@@ -36,6 +37,10 @@
   width: auto;
   display: block;
   object-fit: contain;
+}
+
+.brand__name {
+  color: #B18A43;
 }
 
 .brand__mark {
