@@ -729,3 +729,20 @@
   font-weight: 500;
 }
 .imd-alert__link:hover { color: var(--color-espresso); }
+
+/* Recently-expired alert styling */
+.imd-alert--expired { opacity: 0.7; }
+.imd-alert__expired {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--color-taupe);
+  background: var(--color-parchment);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xs);
+  padding: 1px 6px;
+  margin-left: var(--sp-2);
+  vertical-align: middle;
+}

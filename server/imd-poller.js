@@ -418,17 +418,19 @@ export class ImdAlertsService {
   }
 
   /**
-   * Purge alerts whose expiry date has passed
+   * Purge alerts whose expiry date has passed beyond the grace window.
+   * Alerts that expired within the last GRACE_PERIOD_MS are kept so the
+   * UI can still display recent severe-weather context.
    */
   cleanupExpiredAlerts() {
     const now = Date.now();
+    const GRACE_PERIOD_MS = 24 * 60 * 60 * 1000; // 24 hours
     let count = 0;
 
     for (const [guid, alert] of this.alertsMap.entries()) {
       if (alert.expires) {
         const expTime = new Date(alert.expires).getTime();
-        // Check if expired
-        if (!isNaN(expTime) && expTime < now) {
+        if (!isNaN(expTime) && expTime < now - GRACE_PERIOD_MS) {
           this.alertsMap.delete(guid);
           count++;
         }
@@ -439,20 +441,27 @@ export class ImdAlertsService {
   }
 
   /**
-   * Get all active (non-expired and non-cancelled) alerts, sorted by severity then recency
+   * Get all active (non-expired and non-cancelled) alerts, sorted by severity then recency.
+   * Alerts that expired within the last 24 hours are included with an `isExpired` flag
+   * so the UI can still surface recent severe-weather context.
    */
   getActiveAlerts(filters = {}) {
     const now = Date.now();
+    const GRACE_PERIOD_MS = 24 * 60 * 60 * 1000; // 24 hours
     const alerts = [];
 
     for (const alert of this.alertsMap.values()) {
       // Exclude cancelled alerts
       if (alert.msgType === 'Cancel') continue;
 
-      // Exclude expired alerts
+      // Determine expiry status: allow recently-expired alerts through with a flag
+      let isExpired = false;
       if (alert.expires) {
         const expTime = new Date(alert.expires).getTime();
-        if (!isNaN(expTime) && expTime < now) continue;
+        if (!isNaN(expTime)) {
+          if (expTime < now - GRACE_PERIOD_MS) continue; // Too old, skip entirely
+          if (expTime < now) isExpired = true; // Recently expired, keep with flag
+        }
       }
 
       // Filter by area / state if requested
@@ -470,7 +479,7 @@ export class ImdAlertsService {
         if (alertWeight < minWeight) continue;
       }
 
-      alerts.push(alert);
+      alerts.push({ ...alert, isExpired });
     }
 
     // Sort: 1) Severity (Extreme > Severe > Moderate > Minor)

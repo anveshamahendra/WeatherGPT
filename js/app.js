@@ -866,11 +866,118 @@ function fmtAlertTime(iso) {
   } catch { return iso; }
 }
 
-/** Fetch IMD alerts from the backend API */
+// --- Client-side IMD CAP XML helpers (fallback when Node server isn't running) ---
+
+const IMD_RSS_URL = 'https://cap-sources.s3.amazonaws.com/in-imd-en/rss.xml';
+
+/** Extract a single XML tag value by name, handling optional namespaces */
+function capExtractTag(xml, tag) {
+  if (!xml) return '';
+  const re = new RegExp(`<(?:[a-zA-Z0-9_-]+:)?${tag}(?:\\s[^>]*)?>([\\s\\S]*?)<\\/(?:[a-zA-Z0-9_-]+:)?${tag}>`, 'i');
+  const m = xml.match(re);
+  if (!m) return '';
+  let v = m[1].trim();
+  if (v.startsWith('<![CDATA[') && v.endsWith(']]>')) v = v.slice(9, -3).trim();
+  return v;
+}
+
+/** Extract all matching XML blocks */
+function capExtractBlocks(xml, tag) {
+  if (!xml) return [];
+  const re = new RegExp(`<(?:[a-zA-Z0-9_-]+:)?${tag}(?:\\s[^>]*)?>([\\s\\S]*?)<\\/(?:[a-zA-Z0-9_-]+:)?${tag}>`, 'gi');
+  const blocks = [];
+  let m;
+  while ((m = re.exec(xml)) !== null) blocks.push(m[1].trim());
+  return blocks;
+}
+
+/** Clean whitespace artifacts from CAP text fields */
+function capClean(t) { return (t || '').replace(/\r\n/g, '\n').replace(/[ \t]+/g, ' ').trim(); }
+
+/** Parse a single CAP 1.2 XML document into a normalised alert object */
+function capParseDoc(xml, rssMeta = {}) {
+  const identifier = capExtractTag(xml, 'identifier') || rssMeta.guid || '';
+  const sender = capExtractTag(xml, 'sender') || '';
+  const sent = capExtractTag(xml, 'sent') || rssMeta.pubDate || '';
+  const status = capExtractTag(xml, 'status') || 'Actual';
+  const msgType = capExtractTag(xml, 'msgType') || 'Alert';
+  const scope = capExtractTag(xml, 'scope') || 'Public';
+  const infoBlocks = capExtractBlocks(xml, 'info');
+  const info = infoBlocks[0] || xml;
+  const event = capExtractTag(info, 'event') || rssMeta.title || 'Severe Weather Warning';
+  const urgency = capExtractTag(info, 'urgency') || 'Unknown';
+  const severity = capExtractTag(info, 'severity') || 'Unknown';
+  const certainty = capExtractTag(info, 'certainty') || 'Unknown';
+  const onset = capExtractTag(info, 'onset') || sent;
+  const expires = capExtractTag(info, 'expires') || '';
+  const senderName = capExtractTag(info, 'senderName') || 'IMD';
+  const headline = capExtractTag(info, 'headline') || rssMeta.title || event;
+  const description = capExtractTag(info, 'description') || rssMeta.description || '';
+  const instruction = capExtractTag(info, 'instruction') || '';
+  const areaBlock = capExtractTag(info, 'area') || info;
+  const areaDesc = capExtractTag(areaBlock, 'areaDesc') || 'India';
+
+  const expiresDate = expires ? new Date(expires) : null;
+  const isExpired = expiresDate && expiresDate.getTime() < Date.now();
+
+  return {
+    guid: identifier || rssMeta.guid,
+    identifier, sender, senderName, sent, status, msgType, scope,
+    event, urgency, severity, certainty, onset, expires,
+    headline: capClean(headline), description: capClean(description),
+    instruction: capClean(instruction), areaDesc: capClean(areaDesc),
+    link: rssMeta.link || '', isExpired,
+    source: 'India Meteorological Department (IMD)',
+  };
+}
+
+/** Fetch IMD alerts: try the Node server API first, fall back to direct RSS parsing */
 async function fetchImdAlerts() {
-  const res = await fetch('/api/weather-alerts');
-  if (!res.ok) throw new Error(`IMD API ${res.status}`);
-  return res.json();
+  // Attempt 1: Node.js server API (fast, pre-parsed, cached)
+  try {
+    const res = await fetch('/api/weather-alerts');
+    if (res.ok) return await res.json();
+  } catch (_) { /* server not running — fall through to client-side parsing */ }
+
+  // Attempt 2: Fetch RSS + each CAP XML directly in the browser
+  const res = await fetch(IMD_RSS_URL);
+  if (!res.ok) throw new Error(`RSS fetch ${res.status}`);
+
+  const rssXml = await res.text();
+  const itemBlocks = capExtractBlocks(rssXml, 'item');
+  const alerts = [];
+
+  for (const block of itemBlocks) {
+    const title = capExtractTag(block, 'title');
+    let link = (capExtractTag(block, 'link') || '').replace(/<\/?[^>]+(>|$)/g, '').trim();
+    const guid = capExtractTag(block, 'guid') || link;
+    const pubDate = capExtractTag(block, 'pubDate');
+    const description = capExtractTag(block, 'description');
+    if (!link) continue;
+
+    try {
+      const capRes = await fetch(link);
+      if (!capRes.ok) continue;
+      const capXml = await capRes.text();
+      const alert = capParseDoc(capXml, { guid, link, title, pubDate, description });
+      if (alert.msgType === 'Cancel') continue;
+      if (alert.isExpired) {
+        const expMs = new Date(alert.expires).getTime();
+        if (expMs < Date.now() - 24 * 60 * 60 * 1000) continue;
+      }
+      alerts.push(alert);
+    } catch (_) { /* skip individual CAP fetch failures */ }
+  }
+
+  // Sort: severity (Extreme > Severe > Moderate > Minor) then recency
+  const W = { Extreme: 4, Severe: 3, Moderate: 2, Minor: 1, Unknown: 0 };
+  alerts.sort((a, b) => {
+    const d = (W[b.severity] || 0) - (W[a.severity] || 0);
+    if (d !== 0) return d;
+    return new Date(b.sent || 0).getTime() - new Date(a.sent || 0).getTime();
+  });
+
+  return { status: 'success', source: 'India Meteorological Department (IMD)', count: alerts.length, alerts };
 }
 
 /** Render a single IMD CAP alert card */
@@ -879,14 +986,15 @@ function renderImdAlertCard(alert) {
   const timeWindow = alert.expires
     ? `${fmtAlertTime(alert.onset || alert.sent)} — ${fmtAlertTime(alert.expires)}`
     : fmtAlertTime(alert.sent);
+  const expiredTag = alert.isExpired ? '<span class="imd-alert__expired">Expired</span>' : '';
 
   return `
-    <div class="imd-alert imd-alert--${tier}">
+    <div class="imd-alert imd-alert--${tier}${alert.isExpired ? ' imd-alert--expired' : ''}">
       <div class="imd-alert__badge imd-alert__badge--${tier}">
         <span class="imd-alert__badge-text">${escapeHtml(alert.severity || 'Unknown')}</span>
       </div>
       <div class="imd-alert__body">
-        <h3 class="imd-alert__headline">${escapeHtml(alert.headline || alert.event || 'Severe Weather Warning')}</h3>
+        <h3 class="imd-alert__headline">${escapeHtml(alert.headline || alert.event || 'Severe Weather Warning')} ${expiredTag}</h3>
         <div class="imd-alert__meta">
           <span class="imd-alert__meta-item">
             <svg class="icon-sm"><use href="#icon-warning"/></svg>
@@ -926,7 +1034,7 @@ async function renderWarningsView() {
     if (!alerts.length) {
       imdList.innerHTML = `<div class="state-panel state-panel--empty">
         <p class="state-panel__title">No active IMD warnings</p>
-        <p class="state-panel__body">The India Meteorological Department currently has no active severe weather alerts in the feed. This view auto-refreshes every few minutes.</p>
+        <p class="state-panel__body">The India Meteorological Department currently has no active or recent severe weather alerts in the feed. This view auto-refreshes every few minutes.</p>
       </div>`;
     } else {
       imdList.innerHTML = alerts.map(renderImdAlertCard).join('');

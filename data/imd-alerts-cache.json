@@ -1,5 +1,5 @@
 {
-  "lastFetchedAt": "2026-09-09T19:17:19.445Z",
+  "lastFetchedAt": "2026-09-10T17:04:41.548Z",
   "seenGuids": [
     "urn:oid:2.49.0.1.356.0.2026.9.9.7.24.34",
     "https://cap-sources.s3.amazonaws.com/in-imd-en/2026-09-09-07-24-34.xml"
@@ -35,7 +35,7 @@
       "source": "India Meteorological Department (IMD)",
       "sourceUrl": "https://cap-sources.s3.amazonaws.com/in-imd-en/2026-09-09-07-24-34.xml",
       "capParsed": true,
-      "lastUpdated": "2026-09-09T12:13:00.918Z"
+      "lastUpdated": "2026-09-10T16:45:12.416Z"
     }
   ]
 }
