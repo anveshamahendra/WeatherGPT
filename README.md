@@ -3,8 +3,9 @@
 Conversational weather intelligence for SIH26068 (Ministry of Earth Sciences / IMD, Disaster Management theme).
 
 Ask a plain-language weather question — or use the structured controls — and get a warning-first,
-source-attributed, uncertainty-aware answer. Built as a dependency-free static site so it runs
-anywhere with no build step: open `index.html`, or serve the folder, and it works.
+source-attributed, uncertainty-aware answer. Built as a plain HTML/CSS/JS site with no build step:
+open `index.html`, or serve the folder, and it works. The server (`server.js`) adds IMD alert
+polling and Web Push notifications for severe weather — run `npm install` once to enable these.
 
 ## Overview
 
@@ -39,10 +40,11 @@ js/api.js               Open-Meteo geocoding / forecast / archive calls — the 
 js/dropdown.js          Reusable accessible listbox/combobox component
 js/i18n.js              English/Hindi string table
 js/app.js               State, view routing, query pipeline, rendering
-server.js               Node.js server — serves static assets + /api/weather-alerts endpoint
-server/imd-poller.js    Polls IMD CAP 1.2 RSS feed, parses alerts, manages cache
+server.js               Node.js server — serves static assets, /api/weather-alerts, and Web Push endpoints
+server/imd-poller.js    Polls IMD CAP 1.2 RSS feed, parses alerts, manages cache, dispatches push notifications
 data/imd-alerts-cache.json  Persisted IMD alert cache (auto-generated)
-sw.js                   Service worker for offline shell caching
+data/push-subscriptions.json  Push notification subscriptions (auto-generated, git-ignored)
+sw.js                   Service worker for offline shell caching + push notification display
 ```
 
 ## Data sources — what is live and what isn't
@@ -64,10 +66,23 @@ timestamp.
 ## Running it
 
 The primary way to run WeatherGPT is with the included Node.js server, which provides both the
-static frontend and the IMD alerts API. It requires zero `npm install` — only built-in Node
-modules and the native `fetch` API are used.
+static frontend, the IMD alerts API, and Web Push notifications for severe weather alerts.
 
+### One-time setup
+
+```bash
+npm install
+
+# Generate VAPID keys for Web Push (one-time, outputs a public + private key pair)
+npx web-push generate-vapid-keys
+
+# Copy the keys into a .env file (see .env.example for the format)
+# Set VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, and VAPID_SUBJECT in .env
 ```
+
+### Starting the server
+
+```bash
 # from the project folder
 node server.js
 # then open http://localhost:8080
@@ -78,6 +93,9 @@ section on the Warnings page requires the server to be running, because `/api/we
 does not exist under `file://` or a plain static file server (e.g. `python3 -m http.server`).
 Forecast and climate features work fine without the server, as they hit Open-Meteo directly from
 the browser.
+
+If VAPID keys are not configured, the server still runs normally — push notifications are simply
+unavailable while all other features (forecasts, climate, in-tab alerts) continue to work.
 
 ## Packaging for submission
 

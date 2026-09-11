@@ -76,6 +76,7 @@ export class ImdAlertsService {
     this.rssUrl = options.rssUrl || RSS_URL;
     this.pollIntervalMs = options.pollIntervalMs || DEFAULT_POLL_INTERVAL_MS;
     this.cacheFile = options.cacheFile || CACHE_FILE;
+    this.onNewAlert = typeof options.onNewAlert === 'function' ? options.onNewAlert : null;
     
     // In-memory cache keyed by alert GUID/identifier
     // Map<string, ParsedAlert>
@@ -218,6 +219,12 @@ export class ImdAlertsService {
               newCount++;
             }
             this.alertsMap.set(guid, capAlert);
+            // Notify listener of new/updated alert (for push dispatch)
+            if (this.onNewAlert) {
+              this.onNewAlert(capAlert, existing).catch((e) => {
+                console.warn(`[IMD Poller] onNewAlert callback failed: ${e.message}`);
+              });
+            }
           }
         } catch (capErr) {
           // Log and skip individual CAP fetch failures without crashing the poller

@@ -251,6 +251,15 @@
       <input type="checkbox" id="notify-toggle-input">
       <span data-i18n="notify_toggle_label">Notify me in-browser if risk rises for this location</span>
     </label>
+    <div class="notify-push-row">
+      <label class="notify-severity-label" for="notify-severity">Min. severity for push alerts:</label>
+      <select id="notify-severity" class="notify-severity-select">
+        <option value="Moderate">Moderate</option>
+        <option value="Severe" selected>Severe</option>
+        <option value="Extreme">Extreme</option>
+      </select>
+      <span class="push-support-note" id="push-support-note"></span>
+    </div>
     <div id="warnings-list" class="warning-list"></div>
   </div>
 </section>

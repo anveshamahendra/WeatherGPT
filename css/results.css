@@ -422,6 +422,34 @@
 }
 .notify-toggle input:disabled + span { opacity: 0.5; }
 
+.notify-push-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: 13px;
+  color: var(--color-coffee);
+  margin-bottom: var(--sp-4);
+  flex-wrap: wrap;
+}
+.notify-severity-label {
+  font-size: 13px;
+  color: var(--color-taupe);
+}
+.notify-severity-select {
+  font-family: var(--font-interface);
+  font-size: 13px;
+  padding: 3px 8px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  background: var(--color-paper);
+  color: var(--color-coffee);
+}
+.push-support-note {
+  font-size: 12px;
+  color: var(--color-taupe);
+  font-style: italic;
+}
+
 /* ==========================================================================
    Climate view
    ========================================================================== */

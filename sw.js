@@ -45,3 +45,50 @@ self.addEventListener('fetch', (event) => {
       .catch(() => caches.match(event.request))
   );
 });
+
+// ---------------------------------------------------------------------------
+// Web Push — receive server-initiated push messages
+// ---------------------------------------------------------------------------
+self.addEventListener('push', (event) => {
+  if (!event.data) return;
+  let data;
+  try {
+    data = event.data.json();
+  } catch (_) {
+    return;
+  }
+  const title = data.title || 'WeatherGPT Alert';
+  const options = {
+    body: data.body || '',
+    icon: './assets/branding/logo-icon.svg',
+    badge: './assets/branding/logo-icon.svg',
+    data: { link: data.link || '', guid: data.guid || '' },
+    tag: data.guid || 'weathergpt-push',
+    renotify: true,
+  };
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+// ---------------------------------------------------------------------------
+// Notification click — focus or open the app
+// ---------------------------------------------------------------------------
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const link = event.notification.data?.link || './index.html#warnings';
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      // Focus existing window if open
+      for (const client of clientList) {
+        if (client.url.includes(self.location.origin) && 'focus' in client) {
+          client.focus();
+          if (link && client.navigate) {
+            return client.navigate(link);
+          }
+          return;
+        }
+      }
+      // Otherwise open a new window
+      return clients.openWindow(link);
+    })
+  );
+});

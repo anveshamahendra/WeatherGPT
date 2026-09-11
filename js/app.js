@@ -105,6 +105,75 @@ function isLocationOptedIn(loc) {
 }
 
 // ==========================================================================
+// Web Push helpers
+// ==========================================================================
+
+const PUSH_SUB_KEY = 'wx_push_subscription';
+
+function getStoredPushEndpoint() {
+  try { return JSON.parse(localStorage.getItem(PUSH_SUB_KEY))?.endpoint || null; } catch { return null; }
+}
+
+function storePushEndpoint(endpoint) {
+  try { localStorage.setItem(PUSH_SUB_KEY, JSON.stringify({ endpoint })); } catch { /* ignore */ }
+}
+
+function clearStoredPushEndpoint() {
+  try { localStorage.removeItem(PUSH_SUB_KEY); } catch { /* ignore */ }
+}
+
+/** Convert a base64url-encoded string to a Uint8Array (for VAPID applicationServerKey) */
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const raw = atob(base64);
+  const arr = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i);
+  return arr;
+}
+
+async function subscribeToPush() {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return null;
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    // Check existing subscription first
+    let sub = await reg.pushManager.getSubscription();
+    if (sub) return sub;
+
+    const res = await fetch('/api/push/vapid-public-key');
+    if (!res.ok) return null;
+    const vapidKey = (await res.text()).trim();
+    if (!vapidKey) return null;
+
+    sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(vapidKey),
+    });
+    return sub;
+  } catch (e) {
+    console.warn('[Push] subscribe failed:', e.message);
+    return null;
+  }
+}
+
+async function unsubscribeFromPush() {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    if (sub) {
+      const endpoint = sub.endpoint;
+      await sub.unsubscribe();
+      // Notify server
+      try { await fetch('/api/push/unsubscribe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint }) }); } catch { /* server may be down */ }
+    }
+    clearStoredPushEndpoint();
+  } catch (e) {
+    console.warn('[Push] unsubscribe failed:', e.message);
+  }
+}
+
+// ==========================================================================
 // Dropdown factory
 // ==========================================================================
 
@@ -423,12 +492,26 @@ function setupNav() {
 
 function setupNotifyToggle() {
   const input = document.getElementById('notify-toggle-input');
+  const pushNote = document.getElementById('push-support-note');
+  const severitySelect = document.getElementById('notify-severity');
   if (!('Notification' in window)) {
     input.disabled = true;
     input.parentElement.title = 'Notifications are not supported in this browser';
+    if (pushNote) pushNote.textContent = 'Notifications are not supported in this browser.';
     return;
   }
   input.checked = isLocationOptedIn(state.location);
+
+  // Show push support status
+  const pushSupported = 'serviceWorker' in navigator && 'PushManager' in window;
+  if (pushNote) {
+    if (pushSupported) {
+      pushNote.textContent = '';
+    } else {
+      pushNote.textContent = 'Push notifications are not supported in this browser — in-tab alerts will still work when the page is open.';
+    }
+  }
+
   input.addEventListener('change', async () => {
     if (input.checked) {
       const perm = await Notification.requestPermission();
@@ -437,13 +520,64 @@ function setupNotifyToggle() {
         toast('Notification permission was not granted.');
         return;
       }
+      // Store for local (tab-open) notifications
       const list = getNotifyLocations().filter((l) => l.name !== state.location.name);
       list.push({ name: state.location.name, latitude: state.location.latitude, longitude: state.location.longitude, lastNotifiedLevel: null });
       setNotifyLocations(list);
+
+      // Register push subscription if supported
+      if (pushSupported) {
+        try {
+          const sub = await subscribeToPush();
+          if (sub) {
+            const minSeverity = severitySelect ? severitySelect.value : 'Severe';
+            await fetch('/api/push/subscribe', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                subscription: sub.toJSON(),
+                location: { name: state.location.name, latitude: state.location.latitude, longitude: state.location.longitude },
+                minSeverity,
+              }),
+            });
+            storePushEndpoint(sub.endpoint);
+            toast('Push notifications enabled — you\'ll be alerted even when the tab is closed.');
+          }
+        } catch (e) {
+          console.warn('[Push] subscription setup failed:', e);
+          toast('Push registration failed — in-tab alerts are still active.');
+        }
+      }
     } else {
       setNotifyLocations(getNotifyLocations().filter((l) => l.name !== state.location.name));
+      // Unsubscribe push if active
+      if (pushSupported) {
+        await unsubscribeFromPush();
+      }
     }
   });
+
+  // If severity dropdown changes while subscribed, re-register with new threshold
+  if (severitySelect) {
+    severitySelect.addEventListener('change', async () => {
+      if (!input.checked || !pushSupported) return;
+      try {
+        const reg = await navigator.serviceWorker.ready;
+        const sub = await reg.pushManager.getSubscription();
+        if (sub) {
+          await fetch('/api/push/subscribe', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              subscription: sub.toJSON(),
+              location: { name: state.location.name, latitude: state.location.latitude, longitude: state.location.longitude },
+              minSeverity: severitySelect.value,
+            }),
+          });
+        }
+      } catch { /* non-critical */ }
+    });
+  }
 }
 
 function setupConnectivityBanner() {

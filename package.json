@@ -19,5 +19,8 @@
     "india"
   ],
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "web-push": "^3.6.7"
+  }
 }
