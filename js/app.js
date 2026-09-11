@@ -2,6 +2,7 @@ import { Dropdown } from './dropdown.js';
 import * as api from './api.js';
 import * as U from './utils.js';
 import { LANGUAGES, t, applyTranslations } from './i18n.js';
+import { initAlertsMap, updateAlertsMap, panToAlert } from './map.js';
 
 // ==========================================================================
 // State
@@ -391,6 +392,14 @@ function switchView(name) {
     if (refreshBtn && !refreshBtn.dataset.wired) {
       refreshBtn.dataset.wired = '1';
       refreshBtn.addEventListener('click', () => renderWarningsView());
+    }
+    const imdList = document.getElementById('imd-alerts-list');
+    if (imdList && !imdList.dataset.wired) {
+      imdList.dataset.wired = '1';
+      imdList.addEventListener('click', (e) => {
+        const card = e.target.closest('[data-guid]');
+        if (card) panToAlert(card.dataset.guid);
+      });
     }
   }
   if (name === 'climate' && !document.getElementById('climate-controls').childElementCount) setupClimateControls();
@@ -1004,7 +1013,7 @@ function renderImdAlertCard(alert) {
   const expiredTag = alert.isExpired ? '<span class="imd-alert__expired">Expired</span>' : '';
 
   return `
-    <div class="imd-alert imd-alert--${tier}${alert.isExpired ? ' imd-alert--expired' : ''}">
+    <div class="imd-alert imd-alert--${tier}${alert.isExpired ? ' imd-alert--expired' : ''}" data-guid="${escapeHtml(alert.guid || '')}">
       <div class="imd-alert__badge imd-alert__badge--${tier}">
         <span class="imd-alert__badge-text">${escapeHtml(alert.severity || 'Unknown')}</span>
       </div>
@@ -1054,6 +1063,9 @@ async function renderWarningsView() {
     } else {
       imdList.innerHTML = alerts.map(renderImdAlertCard).join('');
     }
+
+    initAlertsMap();
+    updateAlertsMap(alerts);
   } catch (e) {
     imdList.innerHTML = `<div class="state-panel state-panel--error">
       <p class="state-panel__title">IMD alerts unavailable</p>
@@ -1132,6 +1144,8 @@ function pollWarningsImd() {
     } else {
       imdList.innerHTML = alerts.map(renderImdAlertCard).join('');
     }
+
+    updateAlertsMap(alerts);
 
     const ts = document.getElementById('imd-last-updated');
     if (ts) ts.textContent = `Last updated: ${imdLastFetchedAt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false })}`;
