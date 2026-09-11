@@ -19,6 +19,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import webPush from 'web-push';
 import { ImdAlertsService } from './server/imd-poller.js';
+import { getAllSubscriptions, upsertSubscription, deleteSubscription } from './server/db.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -48,39 +49,30 @@ if (pushEnabled) {
 }
 
 // ---------------------------------------------------------------------------
-// Push subscription storage  (flat JSON, same pattern as imd-alerts-cache.json)
+// Push subscription storage  (SQLite-backed via server/db.js)
 // ---------------------------------------------------------------------------
-const SUBS_DIR = path.join(__dirname, 'data');
-const SUBS_FILE = path.join(SUBS_DIR, 'push-subscriptions.json');
 let pushSubscriptions = new Map(); // endpoint -> { subscription, location, minSeverity }
 
 function loadSubscriptionsFromDisk() {
   try {
-    if (fs.existsSync(SUBS_FILE)) {
-      const raw = fs.readFileSync(SUBS_FILE, 'utf-8');
-      const arr = JSON.parse(raw);
-      if (Array.isArray(arr)) {
-        for (const entry of arr) {
-          if (entry && entry.subscription && entry.subscription.endpoint) {
-            pushSubscriptions.set(entry.subscription.endpoint, entry);
-          }
-        }
-      }
+    const rows = getAllSubscriptions();
+    for (const row of rows) {
+      const sub = JSON.parse(row.subscription_json);
+      pushSubscriptions.set(row.endpoint, {
+        subscription: sub,
+        location: { name: row.location_name, latitude: row.latitude, longitude: row.longitude },
+        minSeverity: row.min_severity,
+        subscribedAt: row.created_at,
+      });
     }
-    console.log(`[Push] Loaded ${pushSubscriptions.size} subscription(s) from disk.`);
+    console.log(`[Push] Loaded ${pushSubscriptions.size} subscription(s) from SQLite.`);
   } catch (err) {
     console.warn(`[Push] Could not load subscriptions: ${err.message}`);
   }
 }
 
 function saveSubscriptionsToDisk() {
-  try {
-    if (!fs.existsSync(SUBS_DIR)) fs.mkdirSync(SUBS_DIR, { recursive: true });
-    const arr = Array.from(pushSubscriptions.values());
-    fs.writeFileSync(SUBS_FILE, JSON.stringify(arr, null, 2), 'utf-8');
-  } catch (err) {
-    console.warn(`[Push] Could not save subscriptions: ${err.message}`);
-  }
+  // No-op — subscriptions are persisted individually via upsertSubscription/deleteSubscription
 }
 
 loadSubscriptionsFromDisk();
@@ -100,7 +92,7 @@ export async function sendPushNotification(subscription, payload) {
     if (err.statusCode === 404 || err.statusCode === 410) {
       console.log(`[Push] Subscription expired (HTTP ${err.statusCode}), removing: ${subscription.endpoint.slice(0, 60)}...`);
       pushSubscriptions.delete(subscription.endpoint);
-      saveSubscriptionsToDisk();
+      deleteSubscription(subscription.endpoint);
     } else {
       console.warn(`[Push] sendNotification failed: ${err.message}`);
     }
@@ -108,13 +100,9 @@ export async function sendPushNotification(subscription, payload) {
   }
 }
 
-// Expose subscriptions and persistence for the poller
+// Expose subscriptions for the poller
 export function getPushSubscriptions() {
   return pushSubscriptions;
-}
-
-export function persistSubscriptions() {
-  saveSubscriptionsToDisk();
 }
 
 // ---------------------------------------------------------------------------
@@ -344,7 +332,12 @@ const server = http.createServer(async (req, res) => {
         minSeverity: severity,
         subscribedAt: new Date().toISOString(),
       });
-      saveSubscriptionsToDisk();
+      upsertSubscription({
+        subscription,
+        location: location || { name: 'Unknown', latitude: null, longitude: null },
+        minSeverity: severity,
+        subscribedAt: new Date().toISOString(),
+      });
       console.log(`[Push] Subscription added/updated: ${subscription.endpoint.slice(0, 60)}... (location: ${location?.name || 'unknown'}, severity: ${severity})`);
 
       res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
@@ -370,7 +363,7 @@ const server = http.createServer(async (req, res) => {
         return;
       }
       const removed = pushSubscriptions.delete(endpoint);
-      if (removed) saveSubscriptionsToDisk();
+      if (removed) deleteSubscription(endpoint);
       console.log(`[Push] Subscription ${removed ? 'removed' : 'not found'}: ${endpoint.slice(0, 60)}...`);
 
       res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });

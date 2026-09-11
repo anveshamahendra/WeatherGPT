@@ -1,3 +1,5 @@
 node_modules/
 .env
-data/push-subscriptions.json
+data/weathergpt.db
+data/weathergpt.db-wal
+data/weathergpt.db-shm

@@ -36,19 +36,10 @@
  * ============================================================================
  */
 
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import { getAllAlerts, upsertAlert, pruneExpiredAlerts } from './db.js';
 
 // IMD Public CAP RSS feed URL
 const RSS_URL = 'https://cap-sources.s3.amazonaws.com/in-imd-en/rss.xml';
-
-// Cache file path to persist alerts between restarts
-const CACHE_DIR = path.resolve(__dirname, '../data');
-const CACHE_FILE = path.join(CACHE_DIR, 'imd-alerts-cache.json');
 
 // Polling interval in milliseconds (12 minutes default — between 10-15 mins to respect IMD servers)
 const DEFAULT_POLL_INTERVAL_MS = 12 * 60 * 1000;
@@ -75,7 +66,6 @@ export class ImdAlertsService {
   constructor(options = {}) {
     this.rssUrl = options.rssUrl || RSS_URL;
     this.pollIntervalMs = options.pollIntervalMs || DEFAULT_POLL_INTERVAL_MS;
-    this.cacheFile = options.cacheFile || CACHE_FILE;
     this.onNewAlert = typeof options.onNewAlert === 'function' ? options.onNewAlert : null;
     
     // In-memory cache keyed by alert GUID/identifier
@@ -92,47 +82,64 @@ export class ImdAlertsService {
   }
 
   /**
-   * Load previously cached alerts from local disk JSON file
+   * Load previously cached alerts from SQLite database
    */
   loadCacheFromDisk() {
     try {
-      if (fs.existsSync(this.cacheFile)) {
-        const raw = fs.readFileSync(this.cacheFile, 'utf-8');
-        const data = JSON.parse(raw);
-        const list = Array.isArray(data) ? data : (data.alerts || []);
-        if (data.seenGuids && Array.isArray(data.seenGuids)) {
-          this.seenGuids = new Set(data.seenGuids);
-        }
-        for (const alert of list) {
-          if (alert && alert.guid) {
-            this.alertsMap.set(alert.guid, alert);
-            this.seenGuids.add(alert.guid);
-            if (alert.link) this.seenGuids.add(alert.link);
-          }
-        }
-        console.log(`[IMD Poller] Loaded ${this.alertsMap.size} active alert(s) and ${this.seenGuids.size} seen identifier(s) from local cache.`);
+      const rows = getAllAlerts();
+      for (const row of rows) {
+        const alert = {
+          guid: row.guid,
+          identifier: row.identifier,
+          link: row.source_url || '',
+          pubDate: row.sent || '',
+          sender: row.sender,
+          senderName: row.sender_name,
+          sent: row.sent,
+          status: row.status,
+          msgType: row.msg_type,
+          scope: row.scope,
+          language: row.language,
+          category: row.category,
+          event: row.event,
+          urgency: row.urgency,
+          severity: row.severity,
+          certainty: row.certainty,
+          onset: row.onset,
+          expires: row.expires,
+          expiresIso: row.expires_iso,
+          headline: row.headline,
+          description: row.description,
+          instruction: row.instruction,
+          web: row.web,
+          areaDesc: row.area_desc,
+          polygon: row.polygon,
+          source: row.source,
+          sourceUrl: row.source_url,
+          capParsed: !!row.cap_parsed,
+          lastUpdated: row.fetched_at,
+        };
+        this.alertsMap.set(alert.guid, alert);
+        this.seenGuids.add(alert.guid);
+        if (alert.link) this.seenGuids.add(alert.link);
       }
+      console.log(`[IMD Poller] Loaded ${this.alertsMap.size} active alert(s) and ${this.seenGuids.size} seen identifier(s) from SQLite.`);
     } catch (err) {
-      console.warn(`[IMD Poller] Could not load cache from disk: ${err.message}`);
+      console.warn(`[IMD Poller] Could not load cache from SQLite: ${err.message}`);
     }
   }
 
   /**
-   * Persist in-memory alerts to local disk JSON file
+   * Persist in-memory alerts to SQLite database
    */
   saveCacheToDisk() {
     try {
-      if (!fs.existsSync(CACHE_DIR)) {
-        fs.mkdirSync(CACHE_DIR, { recursive: true });
+      for (const alert of this.alertsMap.values()) {
+        upsertAlert(alert);
       }
-      const payload = {
-        lastFetchedAt: this.lastFetchedAt,
-        seenGuids: Array.from(this.seenGuids),
-        alerts: Array.from(this.alertsMap.values()),
-      };
-      fs.writeFileSync(this.cacheFile, JSON.stringify(payload, null, 2), 'utf-8');
+      pruneExpiredAlerts(Array.from(this.alertsMap.keys()));
     } catch (err) {
-      console.warn(`[IMD Poller] Could not save cache to disk: ${err.message}`);
+      console.warn(`[IMD Poller] Could not save cache to SQLite: ${err.message}`);
     }
   }
 

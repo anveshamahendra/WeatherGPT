@@ -41,9 +41,9 @@ js/dropdown.js          Reusable accessible listbox/combobox component
 js/i18n.js              English/Hindi string table
 js/app.js               State, view routing, query pipeline, rendering
 server.js               Node.js server — serves static assets, /api/weather-alerts, and Web Push endpoints
+server/db.js            SQLite database layer (better-sqlite3) — prepared statements for alerts and subscriptions
 server/imd-poller.js    Polls IMD CAP 1.2 RSS feed, parses alerts, manages cache, dispatches push notifications
-data/imd-alerts-cache.json  Persisted IMD alert cache (auto-generated)
-data/push-subscriptions.json  Push notification subscriptions (auto-generated, git-ignored)
+data/weathergpt.db      SQLite database (auto-created) — IMD alert cache and push subscriptions
 sw.js                   Service worker for offline shell caching + push notification display
 ```
 
@@ -117,6 +117,31 @@ This creates `weathergpt.tar.gz` in the parent directory, excluding the `.git` f
 - Time-window resolution (e.g. "tomorrow evening" → 17:00–21:00) follows an explicit fixed rule table
   in `js/utils.js`, not free-form NLP — deliberately, so the mapping from question to query is always
   auditable.
+
+## Data persistence
+
+All server-owned state lives in a single SQLite database file (`data/weathergpt.db`) powered by
+`better-sqlite3` — a synchronous, embedded, zero-cost library with no external server process,
+no network calls, and no usage-based billing. The database is created automatically on first
+startup and uses WAL mode for safe concurrent reads/writes between the poller and API routes.
+
+**Two tables are stored in the database:**
+- `imd_alerts` — the IMD alert cache (replaces the former `data/imd-alerts-cache.json`)
+- `push_subscriptions` — push notification registrations (replaces the former `data/push-subscriptions.json`)
+
+**Migration note:** If `data/imd-alerts-cache.json` still exists on disk when this is first
+deployed, its content is safe to discard — the poller re-fetches the full alert set from the IMD
+RSS feed within one poll cycle (12 minutes) regardless, so nothing is lost by starting the SQLite
+table empty. Push subscriptions, if present, are **not** recoverable this way (they came from
+users' browsers) — anyone who had opted in would need to re-enable notifications after a redeploy
+that wipes the database.
+
+**Ephemeral filesystem caveat:** If deployed to a host with an ephemeral disk (e.g. Render's free
+web service tier), the database resets on every redeploy or restart. The IMD alert cache self-heals
+within 12 minutes either way. Push subscriptions do **not** self-heal — anyone who had opted in
+would need to re-enable notifications after a redeploy on such a host. If continuous push delivery
+matters, either use a host with a persistent volume (Railway's persistent volumes, Render's paid
+persistent disks, or a small VPS) or accept this as a known limitation for a free-tier deployment.
 
 ## Design system
 
