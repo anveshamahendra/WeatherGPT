@@ -97,6 +97,17 @@ the browser.
 If VAPID keys are not configured, the server still runs normally — push notifications are simply
 unavailable while all other features (forecasts, climate, in-tab alerts) continue to work.
 
+### Testing
+
+```bash
+npm test
+```
+
+Unit tests cover the query parser (`parseQuery`) and risk-threshold logic (`riskLevelFor`,
+`computeConfidence`, `selectWindowHours`, `escapeHtml`) — the pure functions that the
+"never fabricates" / "warning-first" claims rest on. Tests use Node's built-in test runner
+(`node:test` + `node:assert`) with no extra dependencies.
+
 ## Packaging for submission
 
 To create a submission archive without the `.git/` directory, run:
